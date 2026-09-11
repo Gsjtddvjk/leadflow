@@ -89,7 +89,6 @@ body{
 .quick-ask.answered{background:rgba(48,209,88,.08);border-color:rgba(48,209,88,.3);color:#178a41}
 .quick-ask .check{display:none;font-size:10px;margin-right:2px}
 .quick-ask.answered .check{display:inline}
-.quick-ask[data-quick="whatis"]{border-color:rgba(0,113,227,.3);color:#0071e3}
 .quick-answer-label{font-size:10px;color:var(--green);margin-bottom:4px;font-weight:600}
 @media(max-width:480px){
   body{padding:10px;align-items:flex-start;padding-top:20px}
@@ -120,7 +119,6 @@ body{
       <div class="q-limit-msg" id="qLimitMsg" style="display:none"></div>
       <div class="rate-limit-msg" id="rateLimitMsg">لقد أرسلت كثيرًا. انتظر قليلاً ثم حاول مرة أخرى.</div>
       <div class="quick-asks" id="quickAsks">
-        <button class="quick-ask" data-quick="whatis"><span class="check">✓</span>❓ ما هو DTF</button>
         <button class="quick-ask" data-quick="price"><span class="check">✓</span>💰 الأسعار</button>
         <button class="quick-ask" data-quick="types"><span class="check">✓</span>👕 الأنواع</button>
         <button class="quick-ask" data-quick="order"><span class="check">✓</span>📦 كيف أطلب</button>
@@ -265,14 +263,13 @@ body{
   // ===== CONFIGURATION =====
   const CHAT_WEBHOOK = 'https://abdnnourexe.app.n8n.cloud/webhook/7a24a02b-81db-4916-85ea-3f1567c11e90/chat';
   const LEADS_WEBHOOK = 'https://abdnnourexe.app.n8n.cloud/webhook/leadflow-website-leads';
-  const MAX_QUESTIONS = 5;
+  const MAX_QUESTIONS = 999;
   const RATE_LIMIT_MS = 3000;
   const MAX_MSG_LENGTH = 500;
   const USE_SUPABASE = typeof supabase !== 'undefined' && supabase.url && !supabase.url.includes('YOUR_PROJECT_ID');
 
   // ===== QUICK ANSWERS (محلية - بدون API) =====
   const QUICK_ANSWERS = {
-    whatis: '🖨️ ما هو DTF (Direct to Film)؟\n\nDTF هي تقنية طباعة ملابس حديثة:\n\n✅ تطبع التصميم مباشرة على فيلم خاص\n✅ ثم تُنقل إلى القماش بالحرارة\n✅ النتيجة: ألوان زاهية وثابتة بالغسيل\n✅ تصلح لجميع الأقمشة\n✅ لا تحتاج حد أدنى للكمية\n\n💡 مثالية للتصميمات الملونة والمعقدة!',
     price: '💰 أسعارنا بالأمتار:\n\n• تيشيرتات: 5 دج/متر\n• جاكيتات: 15 دج/متر\n• هودي: 12 دج/متر\n• قبعات: 8 دج/قطعة\n• شنط: 20 دج/متر\n\n💡 خصومات خاصة للكميات الكبيرة!',
     types: '👕 نطبع على جميع أنواع الملابس:\n\n• تيشيرتات (قمصان)\n• جاكيتات وبلايير\n• هودي وسويت شيرت\n• قبعات وكابات\n• شنط وحقائب ظهر\n\n✅ جميع الأقمشة: قطن، بوليستر، ميكس، جينز',
     order: '📦 طريقة الطلب:\n\n1️⃣ أرسل طلبك من النموذج\n2️⃣ حدد الخدمة وعدد الأمتار\n3️⃣ أرسل التصميم (أو سنصممه لك)\n4️⃣ نرسل لك عرض السعر\n5️⃣ بعد الموافقة نبدأ بالطباعة\n6️⃣ التسليم خلال 3-5 أيام\n\n📞 تواصل عبر واتساب للطلب المباشر!',
@@ -474,14 +471,7 @@ body{
   function renderChat(){
     updateQuickAsks();
     if(!chatBox.children.length){
-      if(questionsLeft <= 0) {
-        addBotMsg('مرحبًا بك في My DTF Store! 👋\n\nلقد وصلت إلى الحد الأقصى للرسals.\n\n📝 يرجى ملء نموذج طلبك في تبويب "أرسل طلبك" وسنتواصل معك قريبًا.');
-        chatInput.disabled = true;
-        chatInput.placeholder = 'الحد الأقصى تم - يرجى ملء النموذج';
-        chatSend.disabled = true;
-      } else {
-        addBotMsg('مرحبًا بك في My DTF Store! 👋\n\nأنا مساعدك الذكي. اضغط على الأزرار أعلاه للحصول على إجابة فورية، أو اكتب سؤالك.');
-      }
+      addBotMsg('مرحبًا بك في My DTF Store! 👋\n\nأنا مساعدك الذكي. اضغط على الأزرار أعلاه للحصول على إجابة فورية، أو اكتب سؤالك.');
     }
   }
 
@@ -517,15 +507,6 @@ body{
     const text = sanitize(chatInput.value.trim());
     if(!text || isSending) return;
 
-    // Check if limit reached
-    if(questionsLeft <= 0) {
-      addBotMsg('لقد وصلت إلى الحد الأقصى للرسals.\n\n📝 يرجى ملء نموذج طلبك في تبويب "أرسل طلبك" وسنتواصل معك قريبًا.');
-      chatInput.disabled = true;
-      chatInput.placeholder = 'الحد الأقصى للرسals تم - يرجى ملء النموذج';
-      chatSend.disabled = true;
-      return;
-    }
-
     const now = Date.now();
     if (now - lastSendTime < RATE_LIMIT_MS) {
       rateLimitMsg.style.display = 'block';
@@ -536,75 +517,32 @@ body{
     chatInput.value = ''; chatInput.style.height = 'auto';
     addMsg('user', text);
 
-    // Decrement questions
-    questionsLeft--;
-    sessionStorage.setItem(Q_KEY, questionsLeft);
+    showTyping();
+    chatSend.disabled = true;
+    isSending = true;
+    lastSendTime = now;
 
-    // Check if this was the last question
-    if(questionsLeft <= 0) {
-      showTyping();
-      chatSend.disabled = true;
-      isSending = true;
-      lastSendTime = now;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const r = await fetch(CHAT_WEBHOOK, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'sendMessage', sessionId: sessionId, chatInput: text }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
 
-        const r = await fetch(CHAT_WEBHOOK, {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ action:'sendMessage', sessionId: sessionId, chatInput: text }),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        const raw = await r.text();
-        let d = {}; try { d = JSON.parse(raw); } catch(_){ d = {output: raw}; }
-        const answer = (Array.isArray(d) ? (d[0]?.output||d[0]?.text||d[0]?.reply) : (d.output||d.text||d.reply||d.response||d.message?.content))
-          || raw || 'لم أتمكن من الرد. حاول لاحقًا.';
-        hideTyping();
-        addBotMsg(sanitize(answer));
-        
-        // Show limit message after last answer
-        setTimeout(() => {
-          addBotMsg('📝 وصلت إلى الحد الأقصى للرسals.\n\nيرجى ملء نموذج طلبك في تبويب "أرسل طلبك" وسنتواصل معك قريبًا!');
-          chatInput.disabled = true;
-          chatInput.placeholder = 'الحد الأقصى تم - يرجى ملء النموذج';
-          chatSend.disabled = true;
-        }, 1000);
-      } catch(_){
-        hideTyping();
-        addBotMsg('عذرًا، حدث خطأ في الاتصال. حاول مرة أخرى.');
-      }
-    } else {
-      showTyping();
-      chatSend.disabled = true;
-      isSending = true;
-      lastSendTime = now;
-
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-        const r = await fetch(CHAT_WEBHOOK, {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ action:'sendMessage', sessionId: sessionId, chatInput: text }),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        const raw = await r.text();
-        let d = {}; try { d = JSON.parse(raw); } catch(_){ d = {output: raw}; }
-        const answer = (Array.isArray(d) ? (d[0]?.output||d[0]?.text||d[0]?.reply) : (d.output||d.text||d.reply||d.response||d.message?.content))
-          || raw || 'لم أتمكن من الرد. حاول لاحقًا.';
-        hideTyping();
-        addBotMsg(sanitize(answer));
-      } catch(_){
-        hideTyping();
-        addBotMsg('عذرًا، حدث خطأ في الاتصال. حاول مرة أخرى.');
-      }
+      const raw = await r.text();
+      let d = {}; try { d = JSON.parse(raw); } catch(_){ d = {output: raw}; }
+      const answer = (Array.isArray(d) ? (d[0]?.output||d[0]?.text||d[0]?.reply) : (d.output||d.text||d.reply||d.response||d.message?.content))
+        || raw || 'لم أتمكن من الرد. حاول لاحقًا.';
+      hideTyping();
+      addBotMsg(sanitize(answer));
+    } catch(_){
+      hideTyping();
+      addBotMsg('عذرًا، حدث خطأ في الاتصال. حاول مرة أخرى.');
     }
 
     chatSend.disabled = false;

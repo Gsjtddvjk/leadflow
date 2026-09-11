@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';" />
+<title>LeadFlow — تسجيل الدخول</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230071e3'/><text y='70' x='50' text-anchor='middle' font-size='55' fill='white' font-weight='bold'>L</text></svg>" />
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f2f2f7;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.12);padding:40px;width:100%;max-width:400px;text-align:center}
+.logo{font-size:48px;margin-bottom:10px}
+h1{font-size:24px;color:#1d1d1f;margin-bottom:8px}
+.subtitle{color:#6e6e73;margin-bottom:30px;font-size:14px}
+.field{margin-bottom:20px;text-align:right}
+.field label{display:block;font-size:14px;color:#1d1d1f;margin-bottom:6px;font-weight:500}
+.field input{width:100%;padding:14px 16px;border:2px solid #e5e5ea;border-radius:12px;font-size:16px;transition:border-color .2s;direction:ltr;text-align:left}
+.field input:focus{outline:none;border-color:#0071e3}
+.btn{width:100%;padding:14px;background:#0071e3;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn:hover{background:#0077ed}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.error{color:#ff453a;font-size:13px;margin-top:10px;display:none}
+.success{color:#30d158;font-size:14px;display:none}
+</style>
+</head>
+<body>
+<div class="login-card">
+  <div class="logo">🔐</div>
+  <h1>LeadFlow</h1>
+  <p class="subtitle">نظام إدارة العملاء — تسجيل الدخول</p>
+  
+  <form id="loginForm">
+    <div class="field">
+      <label>كود الدخول</label>
+      <input type="password" id="code" placeholder="أدخل كود الدخول" required autocomplete="off" />
+    </div>
+    <button type="submit" class="btn" id="loginBtn">دخول</button>
+    <div class="error" id="error"></div>
+  </form>
+  
+  <div class="success" id="success">
+    ✅ تم تسجيل الدخول بنجاح
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  
+  const ACCESS_CODE = 'flow123';
+  
+  const form = document.getElementById('loginForm');
+  const errorDiv = document.getElementById('error');
+  const successDiv = document.getElementById('success');
+  const loginBtn = document.getElementById('loginBtn');
+  
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const code = document.getElementById('code').value.trim();
+    
+    errorDiv.style.display = 'none';
+    
+    if (code === ACCESS_CODE) {
+      localStorage.setItem('leadflow-auth', 'true');
+      form.style.display = 'none';
+      successDiv.style.display = 'block';
+      
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 800);
+    } else {
+      errorDiv.textContent = 'كود الدخول غير صحيح';
+      errorDiv.style.display = 'block';
+      document.getElementById('code').value = '';
+      document.getElementById('code').focus();
+    }
+  });
+  
+  // Check if already logged in
+  if (localStorage.getItem('leadflow-auth') === 'true') {
+    window.location.href = 'index.html';
+  }
+})();
+</script>
+</body>
+</html>

@@ -2,12 +2,19 @@
 -- LeadFlow + My DTF Store — Supabase Schema
 -- ============================================
 
+-- حذف الجداول القديمة إن وُجدت (اختياري - للتنزيل النظيف)
+-- DROP TABLE IF EXISTS leads;
+-- DROP TABLE IF EXISTS website_leads;
+-- DROP TABLE IF EXISTS meta_leads;
+-- DROP TABLE IF EXISTS settings;
+
 -- 1. جدول العملاء (Leads)
 CREATE TABLE IF NOT EXISTS leads (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   name TEXT NOT NULL,
   phone TEXT,
   email TEXT,
+  wilaya TEXT,
   service TEXT,
   source TEXT DEFAULT 'Manual',
   status TEXT DEFAULT 'new' CHECK (status IN ('new', 'contact', 'proposal', 'won', 'lost')),
@@ -24,6 +31,7 @@ CREATE TABLE IF NOT EXISTS website_leads (
   name TEXT NOT NULL,
   phone TEXT,
   email TEXT,
+  wilaya TEXT,
   service TEXT,
   meters NUMERIC DEFAULT 0,
   quantity INTEGER DEFAULT 1,
@@ -71,6 +79,12 @@ ON CONFLICT (id) DO NOTHING;
 -- Row Level Security (RLS)
 -- ============================================
 
+-- حذف السياسات القديمة إن وُجدت
+DROP POLICY IF EXISTS "Allow all for leads" ON leads;
+DROP POLICY IF EXISTS "Allow all for website_leads" ON website_leads;
+DROP POLICY IF EXISTS "Allow all for meta_leads" ON meta_leads;
+DROP POLICY IF EXISTS "Allow all for settings" ON settings;
+
 -- تفعيل RLS
 ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE website_leads ENABLE ROW LEVEL SECURITY;
@@ -87,6 +101,13 @@ CREATE POLICY "Allow all for settings" ON settings FOR ALL USING (true);
 -- Realtime (اختياري - للتحديثات الحية)
 -- ============================================
 
--- تفعيل Realtime للجداول
-ALTER PUBLICATION supabase_realtime ADD TABLE leads;
-ALTER PUBLICATION supabase_realtime ADD TABLE website_leads;
+-- تفعيل Realtime للجداول (مع التحقق من عدم التكرار)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'leads') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE leads;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'website_leads') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE website_leads;
+  END IF;
+END $$;
