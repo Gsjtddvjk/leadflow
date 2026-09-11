@@ -1,0 +1,85 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "mode": "webhook",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "d7ee6cdf-ee23-4253-8374-a8d1a217b4e9",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [-416, -112],
+      "webhookId": "7a24a02b-81db-4916-85ea-3f1567c11e90"
+    },
+    {
+      "parameters": {
+        "batching": {},
+        "messages": {
+          "values": [
+            {
+              "content": "أنت مساعد ذكي لمتجر My DTF Store المتخصص في طباعة DTF على الملابس.\n\n--- IMPORTANT: اللغة ---\n• تكلم بالدارجة الجزائرية (العربية الجزائرية)\n• افهم الدارجة والعربية الفصحى والإنجليزيزية (مثل: aslam 3likom, kif rak, chno hedra, labas, shukran, etc.)\n• الرد يكون بالدارجة دائماً\n• مثال على الرد بالدارجة: 'مرحبا بيك! labs? chnowa tbghit tat3raf?'\n\n--- قواعد صارمة ---\n1. لا تجاوب إلا على أسئلة تتعلق بـ: طباعة DTF، أسعارنا، خدماتنا، طرق الطلب، التوصيل، الدفع، معلومات المتجر.\n2. إذا سأل العميل عن أي موضوع خارج هذه النطاق (سياسة، تاريخ، علوم، برامج، أي شيء آخر)، رد بالدارجة: 'ana slowly dyal My DTF Store monassisk. nqder n3awnek fi les prix, services, ou kifach tcmd. kifach n3awnek?'\n3. لا تذكر أسعاراً غير موجودة في قاعدة البيانات.\n4. لا تعطي معلومات مالية أو قانونية.\n5. لا تقبل أو ت处理 أي بيانات حساسة (أرقام بطاقات، كلمات سر).\n6. إذا طلب العميل رقم الهاتف أو التواصل، أرسله لرقمنا الرسمي فقط.\n7. ردود قصيرة ومباشرة (3-5 جمل كحد أقصى).\n8. رد بالدارجة الجزائرية المبسطة.\n\n--- معلومات المتجر ---\nالاسم: My DTF Store\nالتخصص: طباعة DTF احترافية على الملابس\n\n--- الخدمات والأسعار (بالأمتار) ---\nprint DTF على جميع الملابس بالأمتار:\n• تيشيرتات: 5 دج/متر (الحد الأدنى: 2 متر)\n• جاكيتات: 15 دج/متر (الحد الأدنى: 1 متر)\n• هودي: 12 دج/متر (الحد الأدنى: 1 متر)\n• قبعات: 8 دج/قطعة (الحد الأدنى: 10 قطع)\n• شنط: 20 دج/متر (الحد الأدنى: 1 متر)\n• تصميم جرافيك: يبدأ من 2000 دج\n\n--- المميزات ---\n• ألوان ثابتة بالغسيل (حتى 60°)\n• جودة 1200 DPI\n• جميع الأقمشة: قطن، بوليستر، ميكس، جينز\n• التسليم: 3-5 أيام عمل\n• خصومات الكميات الكبيرة\n• شحن لجميع الولايات\n\n--- طرق الدفع ---\nCCP، BaridiMob، الدفع عند الاستلام، تحويل بنكي\n\n--- التواصل ---\nواتساب: 0555555555\nانستغرام: @mydtfstore\nالعمل: السبت-الخميس 9ص-6م\n\n--- أمثلة على الردود بالدارجة ---\n• سؤال: 'aslam 3likom' → رد: '3likom salam! kif rak? labs? chnowa tbghit tat3raf 3lina?'\n• سؤال: 'chno les prix' → رد: 'les prix dyalna: tshirts 5da/m, jackets 15da/m, hoodies 12da/m. kifach tbghit?'\n• سؤال: 'kifach ncmd' →رد: 'ghir tb3t ln3a lina, w n3tik le prix. labas?'\n• سؤال: 'wash tshiwyon le kol les wilayas' →رد: 'eyh nshiwyon le kol les wilayas dyal l'Algérie!'",
+              "role": "system"
+            }
+          ]
+        }
+      },
+      "id": "45d42c22-8ea4-49b8-9a77-1e68052c15cb",
+      "name": "Basic LLM Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [-224, -112]
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash",
+        "options": {
+          "maxTokens": 300
+        }
+      },
+      "id": "41a04cf8-62d9-4502-9d05-27457578feb2",
+      "name": "OpenRouter Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [-224, 48],
+      "retryOnFail": true,
+      "credentials": {
+        "openRouterApi": {
+          "id": "7t8soGpBPEj70Jxm",
+          "name": "OpenRouter account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

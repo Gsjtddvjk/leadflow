@@ -1,0 +1,56 @@
+{
+  "name": "LeadFlow — استقبال عملاء الموقع",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "leadflow-website-leads",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook - Website Leads",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\n\nif (!body.name || !body.phone) {\n  throw new Error('Missing required fields: name, phone');\n}\n\nconst lead = {\n  id: 'web-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),\n  name: body.name.trim(),\n  phone: body.phone.trim(),\n  email: (body.email || '').trim(),\n  service: body.service || 'غير محدد',\n  notes: body.notes || '',\n  source: 'Website',\n  status: 'new',\n  value: 0,\n  created: body.created || new Date().toISOString(),\n  websiteData: {\n    userAgent: body.userAgent || '',\n    referrer: body.referrer || '',\n    page: body.page || ''\n  }\n};\n\nreturn [{ json: lead }];"
+      },
+      "id": "format-lead",
+      "name": "Format Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"success\": true, \"message\": \"Lead received successfully\", \"leadId\": \"{{ $json.id }}\"}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "*" }
+            ]
+          }
+        }
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - Website Leads": {
+      "main": [[{ "node": "Format Lead", "type": "main", "index": 0 }]]
+    },
+    "Format Lead": {
+      "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

@@ -1,0 +1,281 @@
+{
+  "name": "LeadFlow — Meta Ads API Proxy",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "leadflow-meta-ads",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst action = body.action || 'fetch_leads';\nconst accessToken = body.access_token;\nconst adAccountId = body.ad_account_id;\n\nif (!accessToken || !adAccountId) {\n  throw new Error('Missing access_token or ad_account_id');\n}\n\nreturn [{\n  json: {\n    action,\n    accessToken,\n    adAccountId,\n    endpoint: body.endpoint,\n    params: body.params || {},\n    since: body.since || null\n  }\n}];"
+      },
+      "id": "router",
+      "name": "Router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-leads",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "fetch_leads",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "if-fetch-leads",
+      "name": "fetch_leads?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-test",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "test_connection",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "if-test-conn",
+      "name": "test_connection?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [660, 500]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v19.0/{{ $json.adAccountId }}/leadgen_forms",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "fields", "value": "id,name,status,created_time" },
+            { "name": "limit", "value": "100" },
+            { "name": "access_token", "value": "={{ $json.accessToken }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-lead-forms",
+      "name": "Get Lead Forms",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst accessToken = $('Router').first().json.accessToken;\nconst since = $('Router').first().json.since;\nconst forms = data.data || [];\n\nreturn forms.map(f => ({\n  json: {\n    formId: f.id,\n    formName: f.name,\n    accessToken,\n    since\n  }\n}));"
+      },
+      "id": "split-forms",
+      "name": "Split Forms",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 100]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v19.0/{{ $json.formId }}/leads",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "fields", "value": "id,created_time,full_name,phone_number,email,lead_id,ad_id,form_id" },
+            { "name": "limit", "value": "100" },
+            { "name": "access_token", "value": "={{ $json.accessToken }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-leads",
+      "name": "Get Leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const formData = $input.first().json;\nconst leads = formData.data || [];\nconst formName = $('Split Forms').first().json.formName;\n\nreturn leads.map(l => ({\n  json: {\n    id: l.id,\n    full_name: l.full_name || '',\n    phone_number: l.phone_number || '',\n    email: l.email || '',\n    lead_id: l.lead_id || l.id,\n    ad_id: l.ad_id || '',\n    form_id: l.form_id || '',\n    form_name: formName,\n    created_time: l.created_time || new Date().toISOString(),\n    source: 'Meta Ads'\n  }\n}));"
+      },
+      "id": "format-leads",
+      "name": "Format Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const allLeads = $input.all().map(i => i.json).filter(l => l.id);\nreturn [{ json: { success: true, leads_count: allLeads.length, leads: allLeads } }];"
+      },
+      "id": "merge-leads",
+      "name": "Merge Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, 100]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "respond-leads",
+      "name": "Respond Leads",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1980, 100]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v19.0/{{ $json.adAccountId }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "fields", "value": "name,account_status,currency,amount_spent,balance" },
+            { "name": "access_token", "value": "={{ $json.accessToken }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "test-connection",
+      "name": "Test Connection",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nreturn [{ json: { success: true, name: data.name, account_status: data.account_status, currency: data.currency } }];"
+      },
+      "id": "format-test",
+      "name": "Format Test",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "respond-test",
+      "name": "Respond Test",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1320, 500]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v19.0/{{ $json.adAccountId }}/campaigns",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "fields", "value": "id,name,status,objective,daily_budget" },
+            { "name": "limit", "value": "50" },
+            { "name": "access_token", "value": "={{ $json.accessToken }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-campaigns",
+      "name": "Get Campaigns",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nreturn [{ json: { success: true, campaigns: data.data || [] } }];"
+      },
+      "id": "format-campaigns",
+      "name": "Format Campaigns",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 700]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "respond-campaigns",
+      "name": "Respond Campaigns",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1320, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { success: true, leads_count: 0, leads: [] } }];"
+      },
+      "id": "no-forms",
+      "name": "No Forms",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "respond-no-forms",
+      "name": "Respond No Forms",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1540, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Router", "type": "main", "index": 0 }]] },
+    "Router": { "main": [[{ "node": "fetch_leads?", "type": "main", "index": 0 }]] },
+    "fetch_leads?": {
+      "main": [
+        [{ "node": "Get Lead Forms", "type": "main", "index": 0 }],
+        [{ "node": "test_connection?", "type": "main", "index": 0 }]
+      ]
+    },
+    "test_connection?": {
+      "main": [
+        [{ "node": "Test Connection", "type": "main", "index": 0 }],
+        [{ "node": "Get Campaigns", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Lead Forms": { "main": [[{ "node": "Split Forms", "type": "main", "index": 0 }]] },
+    "Split Forms": { "main": [[{ "node": "Get Leads", "type": "main", "index": 0 }]] },
+    "Get Leads": { "main": [[{ "node": "Format Leads", "type": "main", "index": 0 }]] },
+    "Format Leads": { "main": [[{ "node": "Merge Leads", "type": "main", "index": 0 }]] },
+    "Merge Leads": { "main": [[{ "node": "Respond Leads", "type": "main", "index": 0 }]] },
+    "Test Connection": { "main": [[{ "node": "Format Test", "type": "main", "index": 0 }]] },
+    "Format Test": { "main": [[{ "node": "Respond Test", "type": "main", "index": 0 }]] },
+    "Get Campaigns": { "main": [[{ "node": "Format Campaigns", "type": "main", "index": 0 }]] },
+    "Format Campaigns": { "main": [[{ "node": "Respond Campaigns", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
